@@ -22,7 +22,7 @@ class DeepSarsaAgent(DeepAgent):
     def __init__(self, state_size, action_size, layers):
         super().__init__(state_size, action_size, layers)
 
-    def train_model(self, state, action, reward, next_state, next_action, done = False):
+    def train_model(self, state, action, reward, next_state, next_action, done = 0):
         #if self.epsilon > self.epsilon_min:
         #    self.epsilon *= self.epsilon_decay
 

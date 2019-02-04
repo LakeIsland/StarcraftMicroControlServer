@@ -32,6 +32,13 @@ class DeepAgent:
 
     def get_action(self, msg):
         state = np.reshape(msg, [1, self.state_size])
+        actions = self.model.predict(state)[0]
+        #actions = self.predict_with_check_validity(msg)
+        action = int(np.argmax(actions))
+        return action
+
+    def predict_with_check_validity(self, msg):
+        state = np.reshape(msg, [1, self.state_size])
         own_unit = msg[10:18]
         ene_unit = msg[26:34]
         terrains = msg[34:42]
@@ -39,7 +46,5 @@ class DeepAgent:
         q_values = self.model.predict(state)
         kk = q_values[0]
         for i in range(8):
-            kk[i] = kk[i] if terrains[i] < 0.7 and own_unit[i] < 0.7 and ene_unit[i] < 0.7 else np.NINF
-
-        action = int(np.argmax(kk))
-        return action
+            kk[i] = np.NINF if terrains[i] > 0.7 or own_unit[i] > 0.7 or ene_unit[i] > 0.7 else kk[i]
+        return kk

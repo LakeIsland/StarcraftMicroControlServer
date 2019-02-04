@@ -57,5 +57,5 @@ class DQNServer(ModelServer):
             print("Episode %d ended." % (episode))
 
         self.c.close()
-        if(not self.evaluate):
+        if not self.evaluate:
             self.export(self.max_iterate)

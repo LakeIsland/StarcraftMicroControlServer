@@ -40,7 +40,7 @@ class ModelServer:
         self.layers = init_info.get('layers')
         self.map_name = init_info.get('map_name')
         self.export_per = init_info.get('export_per', -1)
-
+        self.keep_last_state_action = init_info.get('keep_last_state_action', False)
 
         print('Layer size:', self.layers)
         print("Mode : ", self.mode)

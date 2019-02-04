@@ -13,8 +13,8 @@ class DeepSARSAServer(ModelServer):
     def waitForClient(self):
         super().wait_for_client()
         super().init_info()
-
         self.agent = DeepSarsaAgent(action_size=self.action_size, state_size=self.state_size, layers=self.layers)
+
         if not (self.file_to_load == ''):
             self.agent.model.load_weights(self.file_to_load)
             print("read from", self.file_to_load)
@@ -27,8 +27,7 @@ class DeepSARSAServer(ModelServer):
                     print("tag FINISHED")
                     break
                 elif tag == "state":
-                    state = msg
-                    action = self.agent.get_action(state)
+                    action = self.agent.get_action(msg)
                     self.sendMessage("action", [action])
                 elif tag == "sarsa":
                     sarsa = msg
