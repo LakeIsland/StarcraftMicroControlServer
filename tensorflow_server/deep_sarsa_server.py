@@ -13,7 +13,7 @@ class DeepSARSAServer(ModelServer):
     def waitForClient(self):
         super().wait_for_client()
         super().init_info()
-        self.agent = DeepSarsaAgent(action_size=self.action_size, state_size=self.state_size, layers=self.layers)
+        self.agent = DeepSarsaAgent(action_size=self.action_size, state_size=self.state_size, layers=self.layers, use_eligibility_trace=self.eligibility_trace)
 
         if not (self.file_to_load == ''):
             self.agent.model.load_weights(self.file_to_load)
@@ -32,13 +32,17 @@ class DeepSARSAServer(ModelServer):
                 elif tag == "sarsa":
                     sarsa = msg
                     self.agent.train_model(self.npreshape(sarsa[0]), sarsa[1],
-                                           sarsa[2], self.npreshape(sarsa[3]), sarsa[4], sarsa[5])
+                                           sarsa[2], self.npreshape(sarsa[3]), sarsa[4], sarsa[5], sarsa[6])
                     self.sendMessage("trainFinished", [1])
                 else:
                     print("Unclassified tag", tag)
 
             episode += 1
             print("Episode %d ended." % (episode))
+
+            if(self.eligibility_trace):
+                self.agent.clear_eligibility_records()
+
             if(self.export_per != -1 and episode % self.export_per == 0):
                 self.export(episode)
 

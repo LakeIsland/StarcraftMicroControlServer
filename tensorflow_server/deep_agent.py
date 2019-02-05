@@ -1,21 +1,26 @@
 from keras.layers import Dense
 from keras.optimizers import Adam
+from keras.optimizers import *
 from keras.models import Sequential
 import numpy as np
+import tensorflow as tf
+
 import random
 import keras.backend as K
 
 class DeepAgent:
-    def __init__(self, state_size, action_size, layers):
+    def __init__(self, state_size, action_size, layers, use_eligibility_trace = False):
+        tf.train.Optimizer
         self.load_model = False
         self.action_size = action_size
         self.state_size = state_size
         self.discount_factor = 0.9
         self.learning_rate = 0.001
+        self.eligibility_trace_lambda = 0.8
+        self.use_eligibility_trace = use_eligibility_trace
+        self.model = self.build_model(layers, use_eligibility_trace)
 
-        self.model = self.build_model(layers)
-
-    def build_model(self, layers):
+    def build_model(self, layers, use_eligibility_trace):
         model = Sequential()
         for i in range(len(layers)):
             if i == 0:
@@ -27,7 +32,15 @@ class DeepAgent:
         model.add(Dense(self.action_size, activation='linear',
                         kernel_initializer='he_uniform'))
         model.summary()
-        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        if use_eligibility_trace:
+            print("USE absoulute error and SGD")
+
+            def custom_loss(y_true, y_pred):
+                return K.sum(y_pred, axis = -1)
+
+            model.compile(loss='mean_absolute_error', optimizer=SGD(lr=self.learning_rate))
+        else:
+            model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
 
     def get_action(self, msg):

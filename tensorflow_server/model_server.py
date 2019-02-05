@@ -40,13 +40,15 @@ class ModelServer:
         self.layers = init_info.get('layers')
         self.map_name = init_info.get('map_name')
         self.export_per = init_info.get('export_per', -1)
-        self.keep_last_state_action = init_info.get('keep_last_state_action', False)
+
+        self.eligibility_trace = init_info.get('eligibility_trace', False)
 
         print('Layer size:', self.layers)
         print("Mode : ", self.mode)
         print("map name: ", self.map_name)
         print(self.max_iterate, " Iterate")
         print("export_per:", self.export_per)
+        print("Eligibility Trace:", self.eligibility_trace)
 
         self.evaluate = self.mode == 'evaluate'
 
