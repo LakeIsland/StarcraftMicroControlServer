@@ -2,6 +2,7 @@ import socket
 import pickle
 import datetime
 import numpy as np
+import os
 
 class ModelServer:
     def __init__(self):
@@ -19,6 +20,9 @@ class ModelServer:
         self.agent = None
         self.algorithm = None
         self.mode = None
+
+        now = datetime.datetime.now()
+        self.created_time = now.strftime('%Y_%m_%d_%H_%M')
 
     def wait_for_client(self):
         while True:
@@ -53,9 +57,15 @@ class ModelServer:
         self.evaluate = self.mode == 'evaluate'
 
     def export(self, n_iterate):
+
+        directory = "../modeldata/%s_%s_%s" % (self.algorithm, self.map_name, self.created_time)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         now = datetime.datetime.now()
         nowDate = now.strftime('%Y_%m_%d_%H_%M')
-        self.agent.model.save_weights("../modeldata/%s_%s_%d_times_%s.h5"%(self.algorithm, self.map_name, n_iterate, nowDate))
+
+        self.agent.model.save_weights("%s/%s_%s_%d_times_%s.h5"%(directory, self.algorithm, self.map_name, n_iterate, nowDate))
         print("EXPORTED")
 
     def sendMessage(self, tag, msg):
