@@ -1,10 +1,4 @@
-from keras.layers import Dense
-from keras.optimizers import Adam
-from keras.models import Sequential
-import numpy as np
-import random
-from deep_agent import *
-import tensorflow.contrib.layers as tfcl
+from rl_agent.deep_agent import *
 import keras.backend as k
 import tensorflow as tf
 

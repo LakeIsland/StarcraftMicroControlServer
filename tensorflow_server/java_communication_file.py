@@ -1,6 +1,6 @@
 import socket
-from deep_sarsa_agent import *
-import ast, sys, os
+from rl_agent.deep_sarsa_agent import *
+import ast
 import datetime
 
 def npreshape(l):

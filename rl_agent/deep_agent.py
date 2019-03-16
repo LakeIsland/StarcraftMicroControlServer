@@ -7,10 +7,11 @@ import tensorflow as tf
 
 import random
 import keras.backend as K
+from rl_agent.rl_agent import RLAgent
 
-class DeepAgent:
+
+class DeepAgent(RLAgent):
     def __init__(self, state_size, action_size, layers, use_eligibility_trace = False):
-        tf.train.Optimizer
         self.load_model = False
         self.action_size = action_size
         self.state_size = state_size

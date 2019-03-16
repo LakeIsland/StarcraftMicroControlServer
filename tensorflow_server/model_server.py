@@ -5,12 +5,11 @@ import numpy as np
 import os
 
 class ModelServer:
-    def __init__(self):
+    def __init__(self, port=1234):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("소켓 생성완료")
 
         HOST = 'localhost'
-        port = 1234
         s.bind((HOST, port))
         s.listen(5)
         print("%d 포트로 연결을 기다리는중" % (port))
@@ -37,16 +36,23 @@ class ModelServer:
 
         self.mode = init_info['mode']
         self.max_iterate = init_info['max_iterate']
-        self.file_to_load = init_info.get('file_to_load', '')
+        self.file_or_folder_to_load = init_info.get('file_or_folder_to_load', '')
 
         self.action_size = init_info.get('action_size')
         self.state_size = init_info.get('state_size')
-        self.layers = init_info.get('layers')
+        self.layers = init_info.get('layers', None)
+
+        self.actor_layers = init_info.get('actor_layers', None)
+        self.critic_layers = init_info.get('critic_layers', None)
+
         self.map_name = init_info.get('map_name')
         self.export_per = init_info.get('export_per', -1)
 
         self.eligibility_trace = init_info.get('eligibility_trace', False)
 
+        self.algorithm = init_info.get('algorithm', None)
+
+        print("Algorithm:", self.algorithm)
         print('Layer size:', self.layers)
         print("Mode : ", self.mode)
         print("map name: ", self.map_name)
@@ -54,7 +60,24 @@ class ModelServer:
         print("export_per:", self.export_per)
         print("Eligibility Trace:", self.eligibility_trace)
 
-        self.evaluate = self.mode == 'evaluate'
+        self.evaluate = self.mode != 'train'
+        self.load_files_list = []
+        self.load_file_counter = 0
+
+        self.sendMessage(tag='init finished', msg=[11111])
+
+    def set_files_to_load(self, model_folder, test_per):
+        for f in os.listdir("../modeldata/"+model_folder):
+            file_name_split = f.split('_')
+            episode_count = int(file_name_split[-7])
+            if test_per == -1:
+                self.load_files_list.append((episode_count, f))
+            elif episode_count % test_per == 0:
+                self.load_files_list.append((episode_count, f))
+        self.load_files_list.sort(key=lambda x: x[0])
+        for f in self.load_files_list:
+            print(f)
+        self.file_or_folder_to_load = "../modeldata/"+model_folder
 
     def export(self, n_iterate):
 

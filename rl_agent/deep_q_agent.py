@@ -1,5 +1,5 @@
 from collections import deque
-from deep_agent import *
+from rl_agent.deep_agent import *
 
 class DeepQAgent(DeepAgent):
     def __init__(self, state_size, action_size, layers):
