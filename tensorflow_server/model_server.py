@@ -40,6 +40,11 @@ class ModelServer:
 
         self.action_size = init_info.get('action_size')
         self.state_size = init_info.get('state_size')
+        self.frame_size = init_info.get('frame_size', None)
+        self.minimap_frame_size = init_info.get('minimap_frame_size', None)
+
+        self.non_spatial_state_size = init_info.get('non_spatial_state_size', 0)
+
         self.layers = init_info.get('layers', None)
 
         self.actor_layers = init_info.get('actor_layers', None)
@@ -87,8 +92,8 @@ class ModelServer:
 
         now = datetime.datetime.now()
         nowDate = now.strftime('%Y_%m_%d_%H_%M')
+        self.agent.save_model("%s/%s_%s_%d_times_%s"%(directory, self.algorithm, self.map_name, n_iterate, nowDate))
 
-        self.agent.model.save_weights("%s/%s_%s_%d_times_%s.h5"%(directory, self.algorithm, self.map_name, n_iterate, nowDate))
         print("EXPORTED")
 
     def sendMessage(self, tag, msg):
@@ -97,7 +102,16 @@ class ModelServer:
         #print("SEND", tag, msg)
 
     def receiveMessage(self):
-        data = pickle.loads(self.c.recv(1024))
+        data = b""
+        while True:
+            packet = self.c.recv(4096)
+            if not packet:
+                break
+            #print("RECEIVED")
+            data += packet
+            if len(packet) < 4096: break
+
+        data = pickle.loads(data)
         tag = data[0]
         msg = data[1]
         #print("RECEIVE", tag, msg)

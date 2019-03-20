@@ -1,9 +1,11 @@
 from deep_sarsa_server import *
+from cnn_server import *
 from deep_q_server import *
 from deep_q_server import *
 import sys, os
 if __name__ == "__main__":
-    s = DeepSARSAServer()
+    #s = DeepSARSAServer()
+    s = CNNServer()
     # try:
     s.waitForClient()
     # except:

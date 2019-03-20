@@ -4,3 +4,9 @@ class RLAgent:
 
     def get_action(self, state):
         pass
+
+    def save_model(self, file_name):
+        pass
+
+    def load_model(self, file_name):
+        pass

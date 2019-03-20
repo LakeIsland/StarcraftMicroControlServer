@@ -10,6 +10,10 @@ import keras.backend as K
 from rl_agent.rl_agent import RLAgent
 
 
+def relu_plus_one(x):
+    return K.relu(x) + 1
+
+
 class A2CAgent(RLAgent):
     def __init__(self, state_size, action_size, actor_layers, critic_layers):
         self.load_model = False
@@ -23,8 +27,7 @@ class A2CAgent(RLAgent):
         self.actor = self.build_actor(actor_layers)
         self.critic = self.build_critic(critic_layers)
         self.actor_updater = self.actor_optimizer()
-        self.critic_updater = self.critic_optimizer()
-
+        #self.critic_updater = self.critic_optimizer()
 
     def build_actor(self, actor_layers):
         actor = Sequential()
@@ -35,7 +38,8 @@ class A2CAgent(RLAgent):
             else:
                 actor.add(Dense(n, activation='relu', kernel_initializer='he_uniform'))
 
-        actor.add(Dense(self.action_size, activation='softmax', kernel_initializer='he_uniform'))
+
+        actor.add(Dense(self.action_size, activation=relu_plus_one, kernel_initializer='he_uniform'))
 
         actor.summary()
         return actor
@@ -49,7 +53,8 @@ class A2CAgent(RLAgent):
             else:
                 critic.add(Dense(n, activation='relu', kernel_initializer='he_uniform'))
 
-        critic.add(Dense(1, activation='linear', kernel_initializer='he_uniform'))
+        critic.add(Dense(1, activation='relu', kernel_initializer='he_uniform'))
+        critic.compile(loss='mse', optimizer=Adam(lr=self.critic_lr))
 
         critic.summary()
         return critic
@@ -57,6 +62,10 @@ class A2CAgent(RLAgent):
     def get_action(self, msg):
         state = np.reshape(msg, [1, self.state_size])
         policy = self.actor.predict(state, batch_size=1).flatten()
+        policy = policy / policy.sum()
+
+        if np.random.rand() < 0.005:
+            print(policy)
         return int(np.random.choice(self.action_size, 1, p=policy)[0])
 
     # 정책신경망을 업데이트하는 함수
@@ -64,7 +73,9 @@ class A2CAgent(RLAgent):
         action = K.placeholder(shape=[None, self.action_size])
         advantage = K.placeholder(shape=[None, ])
 
-        action_prob = K.sum(action * self.actor.output, axis=1)
+        p = self.actor.output / K.sum(self.actor.output, axis=1)
+
+        action_prob = K.sum(action * p, axis=1)
         cross_entropy = K.log(action_prob) * advantage
         loss = -K.sum(cross_entropy)
 
@@ -74,17 +85,17 @@ class A2CAgent(RLAgent):
                            updates=updates)
         return train
 
-    # 가치신경망을 업데이트하는 함수
-    def critic_optimizer(self):
-        target = K.placeholder(shape=[None, ])
-
-        loss = K.mean(K.square(target - self.critic.output))
-
-        optimizer = Adam(lr=self.critic_lr)
-        updates = optimizer.get_updates(self.critic.trainable_weights, [], loss)
-        train = K.function([self.critic.input, target], [], updates=updates)
-
-        return train
+    # # 가치신경망을 업데이트하는 함수
+    # def critic_optimizer(self):
+    #     target = K.placeholder(shape=[None, ])
+    #
+    #     loss = K.mean(K.square(target - self.critic.output))
+    #
+    #     optimizer = Adam(lr=self.critic_lr)
+    #     updates = optimizer.get_updates(self.critic.trainable_weights, [], loss)
+    #     train = K.function([self.critic.input, target], [], updates=updates)
+    #
+    #     return train
 
     def train_model(self, state, action, reward, next_state, next_action, unit_id, done=0):
 
@@ -103,4 +114,10 @@ class A2CAgent(RLAgent):
             target = reward + self.discount_factor * next_value
 
         self.actor_updater([state, act, advantage])
-        self.critic_updater([state, target])
+
+        self.critic.fit(state, target, verbose=0)
+        #self.critic_updater([state, target])
+
+    def save_model(self, file_name):
+        self.actor.save_weights(file_name+"_actor")
+        self.critic.save_weights(file_name + "_critic")

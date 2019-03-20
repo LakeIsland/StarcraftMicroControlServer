@@ -62,3 +62,6 @@ class DeepAgent(RLAgent):
         for i in range(8):
             kk[i] = np.NINF if terrains[i] > 0.7 or own_unit[i] > 0.7 or ene_unit[i] > 0.7 else kk[i]
         return kk
+
+    def save_model(self, file_name):
+        self.model.save_weights(file_name)

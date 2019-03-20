@@ -147,13 +147,49 @@ class DeepSarsaAgent(DeepAgent):
         new_weight = before_weights + self.learning_rate * delta * e_t
         self.model.set_weights(new_weight)
 
+    def train_with_eligibility_trace5(self, state, action, reward, next_state, next_action, unit_id, done = 0):
+
+        target = self.model.predict(state)[0]
+        old_q = target[action]
+        target[action] = 0
+
+        if done == 1:
+            next_q = reward
+        else:
+            next_q = (reward + self.discount_factor *
+                              self.model.predict(next_state)[0][next_action])
+
+        delta = next_q - old_q
+
+        before_weights = np.array(self.model.get_weights())
+
+        target = np.reshape(target, [1, self.action_size])
+        self.model.fit(state, target, epochs=1, verbose=0)
+
+        after_weights = np.array(self.model.get_weights())
+
+        difference = after_weights - before_weights
+
+        gradient_q = difference * (self.action_size / self.learning_rate * (-1 if old_q > 0 else 1))
+
+        e_t_prev = self.eligibility_trace_records.get(unit_id, None)
+        e_t = gradient_q
+        if e_t_prev is not None:
+            e_t += (self.discount_factor * self.eligibility_trace_lambda) * e_t_prev
+
+        self.eligibility_trace_records[unit_id] = e_t
+
+        new_weight = (self.learning_rate * delta) * e_t + before_weights
+        self.model.set_weights(new_weight)
+
+
     def clear_eligibility_records(self):
         self.eligibility_trace_records.clear()
 
     def train_model(self, state, action, reward, next_state, next_action, unit_id, done = 0):
 
         if self.use_eligibility_trace:
-            self.train_with_eligibility_trace4(state, action, reward, next_state, next_action, unit_id, done)
+            self.train_with_eligibility_trace5(state, action, reward, next_state, next_action, unit_id, done)
             return
 
         state = np.float32(state)

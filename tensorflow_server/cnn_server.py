@@ -2,8 +2,12 @@ from model_server import ModelServer
 from rl_agent.deep_sarsa_agent import *
 from rl_agent.eligibility_a2c_agent import *
 import os
+from rl_agent.cnn_agent import *
+from rl_agent.cnn_agent_replay_memory import *
+from rl_agent.cnn_agent_eligibility import *
 
-class DeepSARSAServer(ModelServer):
+
+class CNNServer(ModelServer):
     def __init__(self, port=1234):
         super().__init__(port)
         self.agent = None
@@ -12,12 +16,10 @@ class DeepSARSAServer(ModelServer):
         super().wait_for_client()
         super().init_info()
 
-        if self.algorithm == 'DeepSarsa':
-            self.agent = DeepSarsaAgent(action_size=self.action_size, state_size=self.state_size, layers=self.layers, use_eligibility_trace=self.eligibility_trace)
-        elif self.algorithm == 'A2C':
-            self.agent = A2CAgent(state_size=self.state_size, action_size=self.action_size, actor_layers=self.actor_layers,
-                                  critic_layers=self.critic_layers, use_eligibility_trace=self.eligibility_trace)
-
+        #self.agent = CNNAgentWithReplay(frame_size=self.frame_size, minimap_frame_size=self.minimap_frame_size, non_spatial_state_size=self.non_spatial_state_size, action_size=self.action_size)
+        self.agent = CNNAgentWithReplayEligibility(frame_size=self.frame_size,
+            minimap_frame_size=self.minimap_frame_size, non_spatial_state_size=self.non_spatial_state_size,
+            action_size=self.action_size)
         if self.file_or_folder_to_load != '':
             if os.path.isfile(self.file_or_folder_to_load):
                 self.agent.model.load_weights(self.file_or_folder_to_load)
@@ -25,13 +27,29 @@ class DeepSARSAServer(ModelServer):
 
         while True:
             tag, msg = self.receiveMessage()
+            #last_minimap_state = None
+            #minimap_state = None
             if tag == "state":
-                action = self.agent.get_action(msg)
+                s_spatial = np.frombuffer(msg[0], dtype=np.float32)
+                s_minimap = np.frombuffer(msg[1], dtype=np.float32)
+                s_non_spatial = np.array(msg[2], dtype=np.float32)
+                action = self.agent.get_action((s_spatial, s_minimap, s_non_spatial))
                 self.sendMessage("action", [action])
             elif tag == "sarsa":
                 sarsa = msg
-                self.agent.train_model(self.npreshape(sarsa[0]), sarsa[1],
-                                       sarsa[2], self.npreshape(sarsa[3]), sarsa[4], sarsa[5], sarsa[6])
+                s_spatial = np.frombuffer(sarsa[0][0], dtype=np.float32)
+                s_minimap = np.frombuffer(sarsa[0][1], dtype=np.float32)
+                s_non_spatial = np.array(sarsa[0][2], dtype=np.float32)
+
+                ns_spatial = np.frombuffer(sarsa[3][0], dtype=np.float32)
+                ns_minimap = np.frombuffer(sarsa[3][1], dtype=np.float32)
+                ns_non_spatial = np.array(sarsa[3][2], dtype=np.float32)
+
+                #s2 = np.frombuffer(sarsa[3], dtype=np.float32)
+                self.agent.train_model((s_spatial, s_minimap, s_non_spatial),
+                                       sarsa[1],
+                                       sarsa[2],
+                                       (ns_spatial, ns_minimap, ns_non_spatial), sarsa[4], sarsa[5], sarsa[6])
                 self.sendMessage("train finished", [1])
 
             elif tag == "export":
@@ -42,9 +60,10 @@ class DeepSARSAServer(ModelServer):
 
             elif tag == "episode finished":
                 episode = msg[0]
+                #self.agent.update_target_model()
+                #print("Episode %d ended. Memory Size %d" % (episode, len(self.agent.memory)) )
                 print("Episode %d ended." % episode)
-                if self.eligibility_trace:
-                    self.agent.clear_eligibility_records()
+                self.agent.clear_eligibility_record()
 
             elif tag == "load_file":
                 if self.load_file_counter < len(self.load_files_list):
